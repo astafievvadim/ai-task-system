@@ -1,0 +1,53 @@
+services:
+  api-service:
+    build:
+      context: ./api-service
+      dockerfile: Dockerfile
+    container_name: api-service
+    ports:
+      - "8080:8080"
+    environment:
+      DB_URL: jdbc:postgresql://db:5432/tasks
+      DB_USERNAME: postgres
+      DB_PASSWORD: postgres
+      TASK_ENCRYPTION_KEY: "my-32-pretty-secret-key"
+      AI_SERVICE_URL: http://ai-service:8001
+    depends_on:
+      - db
+      - ai-service
+    networks:
+      - task-net
+
+  ai-service:
+    build:
+      context: ./ai-service
+      dockerfile: Dockerfile
+    container_name: ai-service
+    ports:
+      - "8001:8001"
+    networks:
+      - task-net
+    environment:
+      MODEL_RUNNER_URL: http://model-runner.docker.internal/engines/v1
+      MODEL_NAME: ai/llama3.2:1B-Q8_0
+
+  db:
+    image: postgres:15
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: tasks
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    networks:
+      - task-net
+
+volumes:
+  pgdata:
+
+networks:
+  task-net:
+    driver: bridge
